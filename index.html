@@ -361,6 +361,7 @@ function _rowToOferta(row) {
   const emplazamiento = m.emplazamiento || m.estacion || '';
   return {
     id: row.id,
+    proyectoId: row.proyecto_id || '',
     numero: row.codigo || m.numero || '',
     asunto: row.asunto || '',
     estado: estado,
@@ -390,6 +391,7 @@ function _ofertaToRow(o) {
     id: o.id, codigo: o.numero || '', asunto: o.asunto || '',
     estado: _OFERTA_ESTADO_REV_MAP[o.estado] || o.estado || 'borrador',
     cliente_id: o.clienteId || null, po: o.po || null,
+    proyecto_id: o.proyectoId || null,
     creado_por_id: o.creadoPorId || null,
     importe_total: o.importeTotal || null,
     metadatos: { numero: o.numero||'', fecha: o.fecha||'', estacion: o.estacion||'', zona: o.zona||'', responsable: o.responsable||'', lineas: o.lineas||[], version: o.version||1, ref: o.ref||'', notas: o.notas||'' },
@@ -10203,7 +10205,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
     }
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "\u2014 Sin proyecto \u2014"), proyectos.map(p => /*#__PURE__*/React.createElement("option", {
+  }, "\u2014 Sin proyecto \u2014"), proyectos.filter(p => !editOferta.emplazamiento || p.estacion === editOferta.emplazamiento).map(p => /*#__PURE__*/React.createElement("option", {
     key: p.id,
     value: p.id
   }, p.nombre, p.estacion ? ` — ${p.estacion}` : ""))), /*#__PURE__*/React.createElement(Btn, {
@@ -11306,7 +11308,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
     label: "Proyecto (opcional)",
     value: editOferta.proyectoId || "",
     onChange: onOfertaProyChange,
-    options: proyectos.map(p => ({
+    options: proyectos.filter(p => !editOferta.emplazamiento || p.estacion === editOferta.emplazamiento).map(p => ({
       v: p.id,
       l: `${p.nombre}${p.estacion ? ` — ${p.estacion}` : ""}`
     })),
