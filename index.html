@@ -6208,11 +6208,29 @@ function App() {
     setFiltroRPid(proy.nombre);
   };
 
+  const irAOferta = (o) => {
+    setEditOferta({ ...o, lineas: [...(o.lineas || [])] });
+    setEditOfertaMode("edit");
+    setModulo("ofertas");
+    setViewO("editor");
+  };
+
+  const irAFactura = (f) => {
+    setEditDoc({ ...f, lineas: [...(f.lineas || [])] });
+    setEditMode("edit");
+    setFechaWarn(null);
+    setModulo("facturacion");
+    setViewF("editor");
+  };
+
   const renderBuscadorProyecto = (proy) => {
     const cli = clientes.find(c => c.id === proy.clienteId);
     const regsDelProy = registros.filter(r => r.proyectoId === proy.id);
+    const ofertasDelProy = ofertas.filter(o => o.proyectoId === proy.id);
     const facturaIdsDelProy = new Set(regsDelProy.map(r => r.facturaId).filter(Boolean));
     const facturasDelProy = facturas.filter(f => facturaIdsDelProy.has(f.id));
+    const totalOfertas = ofertasDelProy.reduce((s, o) => s + (o.importeTotal || 0), 0);
+    const totalFacturas = facturasDelProy.reduce((s, f) => s + (f.total || 0), 0);
 
     // Aplana cada registro en una fila por línea (un registro-grupo puede llevar
     // varias actividades: p.ej. toma de datos + informe técnico + separata),
@@ -6257,7 +6275,8 @@ function App() {
         ),
         React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
           React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, filasActividad.length + " activ."),
-          isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, facturasDelProy.length + " facturas")
+          isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, ofertasDelProy.length + " ofertas" + (totalOfertas ? " · " + fmtE(totalOfertas) : "")),
+          isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, facturasDelProy.length + " facturas" + (totalFacturas ? " · " + fmtE(totalFacturas) : ""))
         )
       ),
       abierto && React.createElement("div", { style: { padding: "0 14px 14px" } },
@@ -6282,15 +6301,36 @@ function App() {
             )
           );
         }),
+        isAdmin && renderBuscBloque(proy, "ofertas", "Ofertas", ofertasDelProy, o =>
+          React.createElement("div", {
+            key: o.id,
+            onClick: () => irAOferta(o),
+            style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8, cursor: "pointer" }
+          },
+            React.createElement("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, (o.numero || "—") + " · " + (o.asunto || "")),
+            React.createElement("span", { style: { display: "flex", gap: 8, alignItems: "center", flexShrink: 0 } },
+              React.createElement("span", { style: { fontSize: 11, color: C.textSec } }, fmtE(o.importeTotal)),
+              badgeEstado(o.estado)
+            )
+          )
+        ),
         isAdmin && renderBuscBloque(proy, "facturas", "Facturas", facturasDelProy, f =>
-          React.createElement("div", { key: f.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
+          React.createElement("div", {
+            key: f.id,
+            onClick: () => irAFactura(f),
+            style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8, cursor: "pointer" }
+          },
             React.createElement("span", null, f.numero || "—"),
-            badgeEstado(f.estado)
+            React.createElement("span", { style: { display: "flex", gap: 8, alignItems: "center", flexShrink: 0 } },
+              React.createElement("span", { style: { fontSize: 11, color: C.textSec } }, fmtE(f.total)),
+              badgeEstado(f.estado)
+            )
           )
         )
       )
     );
   };
+
 
   const renderAnioBloque = (anio, abierto, onToggle, count, contenido) =>
     React.createElement("div", { key: anio, style: { marginBottom: 10 } },
@@ -6310,10 +6350,6 @@ function App() {
       (porAnio[anio] = porAnio[anio] || []).push(p);
     });
     const anios = Object.keys(porAnio).sort((a, b) => b.localeCompare(a));
-
-    // Ofertas: no llevan proyectoId poblado en los datos reales, solo el nombre
-    // de SITE en texto libre — se muestran a nivel de SITE, no por proyecto.
-    const ofertasSite = buscSiteId ? ofertas.filter(o => (o.estacion || "").trim().toLowerCase() === estName).sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")) : [];
 
     // HSSE: idem, solo enlaza por site en texto libre; se agrupa por año,
     // independiente de los proyectos.
@@ -6354,17 +6390,6 @@ function App() {
         porAnio[anio].length,
         porAnio[anio].map(proy => renderBuscadorProyecto(proy))
       )),
-
-      isAdmin && buscSiteId && React.createElement("h3", { style: { fontSize: 14, fontWeight: 700, margin: "18px 0 10px" } }, "Ofertas del SITE"),
-      isAdmin && buscSiteId && (ofertasSite.length === 0
-        ? React.createElement("div", { style: { padding: "10px 0 20px", color: C.muted, fontSize: 13 } }, "No hay ofertas para este SITE.")
-        : React.createElement("div", { style: { border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", marginBottom: 20 } },
-          ofertasSite.map(o => React.createElement("div", { key: o.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
-            React.createElement("span", null, (o.numero || "—") + " · " + (o.asunto || "") + " · " + fmtD(o.fecha)),
-            badgeEstado(o.estado)
-          ))
-        )
-      ),
 
       buscSiteId && React.createElement("h3", { style: { fontSize: 14, fontWeight: 700, margin: "18px 0 10px" } }, "Supervisiones HSSE del SITE"),
       buscSiteId && hsseSite.length === 0 && React.createElement("div", { style: { padding: "10px 0 20px", color: C.muted, fontSize: 13 } }, "No hay supervisiones HSSE para este SITE."),
