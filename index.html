@@ -2587,7 +2587,8 @@ const P = {
   bill: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9l2 2 4-4",
   mail: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6",
   csv: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h2m4 0h2M8 17h8",
-  offer: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M12 12h.01M12 16h.01"
+  offer: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M12 12h.01M12 16h.01",
+  search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
 };
 function Btn({
   children,
@@ -3805,6 +3806,11 @@ function App() {
   const [user, setUser] = useState(null);
   const [buzon, setBuzon] = useState([]);
   const [showBuzon, setShowBuzon] = useState(false);
+  const [buscSiteId, setBuscSiteId] = useState("");
+  const [buscSiteInput, setBuscSiteInput] = useState("");
+  const [buscExpYears, setBuscExpYears] = useState({});
+  const [buscExpProy, setBuscExpProy] = useState({});
+  const [buscExpBlock, setBuscExpBlock] = useState({});
   const [loggingOut, setLoggingOut] = useState(false);
   const [lastLogin, setLastLogin] = useState(null);
   const [autoLogoutWarn, setAutoLogoutWarn] = useState(false);
@@ -6131,7 +6137,165 @@ function App() {
     k: "hsse",
     l: "HSSE",
     i: P.eye
+  }, {
+    k: "buscador",
+    l: "Buscador",
+    i: P.search
   }];
+
+  // ── Buscador — busca por SITE (na_estaciones), muestra proyectos y sus
+  // actividades/ofertas/facturas/supervisiones. Reutiliza isAdmin exactamente
+  // igual que el resto de la app para ocultar precios a técnicos: nada nuevo.
+  const estacionesConId = Object.entries(window._naEstNomMap || {})
+    .map(([id, nombre]) => ({ id, nombre }))
+    .filter(x => x.nombre)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  const badgeEstado = (estado, tipo) => {
+    const map = {
+      pendiente: { bg: "#fff7e6", fg: "#d48a10", txt: "Pendiente" },
+      aprobado: { bg: "#f0fdf4", fg: "#1a9e7a", txt: "Aprobado" },
+      rechazado: { bg: "#fef2f2", fg: "#dc2626", txt: "Rechazado" },
+      anulado: { bg: "#f4f4f5", fg: "#71717a", txt: "Anulado" },
+      Borrador: { bg: "#f4f4f5", fg: "#71717a", txt: "Borrador" },
+      Enviada: { bg: "#eff6ff", fg: "#2563eb", txt: "Enviada" },
+      Aceptada: { bg: "#f0fdf4", fg: "#1a9e7a", txt: "Aceptada" },
+      Rechazada: { bg: "#fef2f2", fg: "#dc2626", txt: "Rechazada" },
+      Facturada: { bg: "#f0f4ff", fg: "#4f46e5", txt: "Facturada" },
+      Cobrada: { bg: "#f0fdf4", fg: "#1a9e7a", txt: "Cobrada" },
+      Vencida: { bg: "#fef2f2", fg: "#dc2626", txt: "Vencida" }
+    };
+    const st = map[estado] || { bg: "#f4f4f5", fg: "#71717a", txt: estado || "—" };
+    return React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: st.fg, background: st.bg, padding: "2px 8px", borderRadius: 10 } }, st.txt);
+  };
+
+  const buscBlockToggle = (key) => setBuscExpBlock(s => ({ ...s, [key]: s[key] === undefined ? false : !s[key] }));
+  const buscBlockOpen = (key) => buscExpBlock[key] !== false; // por defecto abierto
+
+  const renderBuscBloque = (proy, tipo, titulo, items, renderItem) => {
+    const key = proy.id + "_" + tipo;
+    const abierto = buscBlockOpen(key);
+    return React.createElement("div", { key: tipo, style: { marginTop: 8, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" } },
+      React.createElement("div", {
+        onClick: () => buscBlockToggle(key),
+        style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", background: C.cardL, cursor: "pointer", fontSize: 12, fontWeight: 700 }
+      },
+        React.createElement("span", null, (abierto ? "▾ " : "▸ ") + titulo + " (" + items.length + ")"),
+      ),
+      abierto && (items.length === 0
+        ? React.createElement("div", { style: { padding: "10px 12px", fontSize: 12, color: C.muted } }, "Sin " + titulo.toLowerCase() + ".")
+        : React.createElement("div", { style: { display: "flex", flexDirection: "column" } }, items.map(renderItem))
+      )
+    );
+  };
+
+  const renderBuscadorProyecto = (proy) => {
+    const cli = clientes.find(c => c.id === proy.clienteId);
+    const regsDelProy = registros.filter(r => r.proyectoId === proy.id);
+    const ofertasDelProy = ofertas.filter(o => o.proyectoId === proy.id);
+    const facturaIdsDelProy = new Set(regsDelProy.map(r => r.facturaId).filter(Boolean));
+    const facturasDelProy = facturas.filter(f => facturaIdsDelProy.has(f.id));
+    const estNombre = (proy.estacion || "").trim().toLowerCase();
+    const hsseDelProy = hsseSups.filter(s => (s.site || "").trim().toLowerCase() === estNombre);
+    const fechas = regsDelProy.map(r => r.fecha).filter(Boolean).sort();
+    const rango = fechas.length ? fmtD(fechas[0]) + " – " + fmtD(fechas[fechas.length - 1]) : "—";
+    const abierto = !!buscExpProy[proy.id];
+    const proyRef = React.createRef();
+
+    return React.createElement("div", { key: proy.id, ref: proyRef, style: { background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" } },
+      React.createElement("div", {
+        onClick: () => {
+          setBuscExpProy(s => ({ ...s, [proy.id]: !s[proy.id] }));
+          setTimeout(() => { proyRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 60);
+        },
+        style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer", gap: 10, flexWrap: "wrap" }
+      },
+        React.createElement("div", { style: { minWidth: 0 } },
+          React.createElement("div", { style: { fontWeight: 700, fontSize: 13 } }, (abierto ? "▾ " : "▸ ") + (proy.nombre || "—")),
+          React.createElement("div", { style: { fontSize: 11, color: C.textSec, marginTop: 2 } }, (cli?.nombre || "—") + " · " + rango)
+        ),
+        React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
+          React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, regsDelProy.length + " activ."),
+          React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, hsseDelProy.length + " superv."),
+          isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, ofertasDelProy.length + " ofertas"),
+          isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, facturasDelProy.length + " facturas")
+        )
+      ),
+      abierto && React.createElement("div", { style: { padding: "0 14px 14px" } },
+        renderBuscBloque(proy, "activ", "Actividades", regsDelProy, r =>
+          React.createElement("div", { key: r.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
+            React.createElement("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, r.esGrupo ? (gC(r.lineasGrupo?.[0]?.conceptoId)?.nombre || proy.nombre || "Grupo de actividades") : (gC(r.conceptoId)?.nombre || "—")),
+            React.createElement("span", { style: { display: "flex", gap: 6, alignItems: "center", flexShrink: 0 } },
+              React.createElement("span", { style: { fontSize: 11, color: C.textSec } }, r.trabajador || "—"),
+              !isAdmin && r.ofertaId && React.createElement("span", { style: { fontSize: 9, fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.1)", padding: "1px 6px", borderRadius: 8 } }, "Ofertada"),
+              badgeEstado(r.estado)
+            )
+          )
+        ),
+        renderBuscBloque(proy, "hsse", "Supervisiones HSSE", hsseDelProy, s =>
+          React.createElement("div", { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
+            React.createElement("span", null, fmtD(s.fecha) + " · " + (s.supervisor || "—")),
+            badgeEstado(s.estado)
+          )
+        ),
+        isAdmin && renderBuscBloque(proy, "ofertas", "Ofertas", ofertasDelProy, o =>
+          React.createElement("div", { key: o.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
+            React.createElement("span", null, (o.numero || "—") + " · " + (o.asunto || "")),
+            badgeEstado(o.estado)
+          )
+        ),
+        isAdmin && renderBuscBloque(proy, "facturas", "Facturas", facturasDelProy, f =>
+          React.createElement("div", { key: f.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
+            React.createElement("span", null, f.numero || "—"),
+            badgeEstado(f.estado)
+          )
+        )
+      )
+    );
+  };
+
+  const buscadorEl = modulo !== "buscador" ? null : (() => {
+    const proyectosSite = buscSiteId ? proyectos.filter(p => p.estacionId === buscSiteId).sort((a, b) => (b.creadoEn || "").localeCompare(a.creadoEn || "")) : [];
+    const porAnio = {};
+    proyectosSite.forEach(p => {
+      const anio = (p.creadoEn || "").slice(0, 4) || "—";
+      (porAnio[anio] = porAnio[anio] || []).push(p);
+    });
+    const anios = Object.keys(porAnio).sort((a, b) => b.localeCompare(a));
+    return React.createElement("div", { style: { maxWidth: 1060, margin: "0 auto" } },
+      React.createElement("h2", { style: { fontSize: 17, fontWeight: 700, marginBottom: 4 } }, "Buscador"),
+      React.createElement("p", { style: { fontSize: 12, color: C.textSec, marginBottom: 14 } }, "Busca un SITE para ver los proyectos asociados y, dentro de cada uno, sus actividades" + (isAdmin ? ", ofertas, facturas" : "") + " y supervisiones HSSE."),
+      React.createElement("input", {
+        list: "buscador-est-list",
+        placeholder: "Escribe el nombre de un SITE...",
+        value: buscSiteInput,
+        onChange: e => {
+          const val = e.target.value;
+          setBuscSiteInput(val);
+          const match = estacionesConId.find(x => x.nombre === val);
+          setBuscSiteId(match ? match.id : "");
+        },
+        style: { width: "100%", maxWidth: 420, padding: "9px 12px", border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, marginBottom: 18, fontFamily: "inherit" }
+      }),
+      React.createElement("datalist", { id: "buscador-est-list" },
+        estacionesConId.map(e => React.createElement("option", { key: e.id, value: e.nombre }))
+      ),
+      !buscSiteId && React.createElement("div", { style: { textAlign: "center", padding: 40, color: C.muted, fontSize: 13 } }, "Busca un SITE para empezar."),
+      buscSiteId && proyectosSite.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 40, color: C.muted, fontSize: 13 } }, "No hay proyectos para este SITE."),
+      buscSiteId && anios.map(anio => {
+        const yAbierto = buscExpYears[anio] !== false; // por defecto abierto si hay pocos años; se pliega a mano
+        return React.createElement("div", { key: anio, style: { marginBottom: 10 } },
+          React.createElement("div", {
+            onClick: () => setBuscExpYears(s => ({ ...s, [anio]: !yAbierto })),
+            style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "9px 14px", background: C.cardL, borderRadius: 8, border: `1px solid ${C.border}`, fontWeight: 700, fontSize: 13 }
+          }, (yAbierto ? "▾ " : "▸ ") + anio + " (" + porAnio[anio].length + " proyectos)"),
+          yAbierto && React.createElement("div", { style: { marginTop: 8, display: "flex", flexDirection: "column", gap: 8 } },
+            porAnio[anio].map(proy => renderBuscadorProyecto(proy))
+          )
+        );
+      })
+    );
+  })();
   // Auto-logout por inactividad
   useEffect(() => {
     if (fase !== "app") return;
@@ -13184,6 +13348,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
     d: P.dl,
     sz: 12
   }), " Descargar")))),
+  modulo === "buscador" && buscadorEl,
   modulo === "hsse" && React.createElement(React.Fragment, null,
     /* HSSE sub-nav */
     React.createElement("div", {style:{display:"flex",gap:4,marginBottom:12,background:"#fff",borderRadius:8,padding:4,border:"1px solid #dde2e8"}},
