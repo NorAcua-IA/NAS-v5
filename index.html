@@ -6189,14 +6189,53 @@ function App() {
     );
   };
 
+  const resolverVistaTrabajo = (r) => {
+    if (!r) return "registro";
+    const lineas = r.lineasGrupo || [];
+    const allAprob = lineas.length > 0 && lineas.every(l => l.certifAprobada);
+    const allCO = lineas.length > 0 && lineas.every(l => l.certifOferta);
+    if (r.facturado || r.estadoCertif === "finalizado" || allAprob || allCO || r.estado === "rechazado" || r.estado === "certif_oferta" || r.estado === "aprobado") return "archivadas";
+    const tieneOferta = !!(r.ofertaCodigo || (r.ofertaCodigos && r.ofertaCodigos.length > 0));
+    if (r.estado === "pendiente" && !tieneOferta) return "registro";
+    return "revision";
+  };
+
+  const irATrabajo = (r, proy) => {
+    setModulo("trabajos");
+    setView(resolverVistaTrabajo(r));
+    setFiltroRPid(proy.nombre);
+  };
+
   const renderBuscadorProyecto = (proy) => {
     const cli = clientes.find(c => c.id === proy.clienteId);
     const regsDelProy = registros.filter(r => r.proyectoId === proy.id);
-    const ofertasDelProy = ofertas.filter(o => o.proyectoId === proy.id);
     const facturaIdsDelProy = new Set(regsDelProy.map(r => r.facturaId).filter(Boolean));
     const facturasDelProy = facturas.filter(f => facturaIdsDelProy.has(f.id));
-    const estNombre = (proy.estacion || "").trim().toLowerCase();
-    const hsseDelProy = hsseSups.filter(s => (s.site || "").trim().toLowerCase() === estNombre);
+
+    // Aplana cada registro en una fila por línea (un registro-grupo puede llevar
+    // varias actividades: p.ej. toma de datos + informe técnico + separata),
+    // conservando estado/técnico/fechas del registro padre en cada fila.
+    const filasActividad = [];
+    regsDelProy.forEach(r => {
+      if (r.esGrupo && Array.isArray(r.lineasGrupo) && r.lineasGrupo.length) {
+        r.lineasGrupo.forEach(l => {
+          filasActividad.push({
+            key: r.id + "_" + l.id,
+            registro: r,
+            nombre: gC(l.conceptoId)?.nombre || l.conceptoNombre || l.nombre || "—",
+            comentario: l.comentario || l.observaciones || ""
+          });
+        });
+      } else {
+        filasActividad.push({
+          key: r.id,
+          registro: r,
+          nombre: gC(r.conceptoId)?.nombre || "—",
+          comentario: r.observaciones || ""
+        });
+      }
+    });
+
     const fechas = regsDelProy.map(r => r.fecha).filter(Boolean).sort();
     const rango = fechas.length ? fmtD(fechas[0]) + " – " + fmtD(fechas[fechas.length - 1]) : "—";
     const abierto = !!buscExpProy[proy.id];
@@ -6215,35 +6254,32 @@ function App() {
           React.createElement("div", { style: { fontSize: 11, color: C.textSec, marginTop: 2 } }, (cli?.nombre || "—") + " · " + rango)
         ),
         React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } },
-          React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, regsDelProy.length + " activ."),
-          React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, hsseDelProy.length + " superv."),
-          isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, ofertasDelProy.length + " ofertas"),
+          React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, filasActividad.length + " activ."),
           isAdmin && React.createElement("span", { style: { fontSize: 10, background: C.cardL, border: `1px solid ${C.border}`, borderRadius: 10, padding: "2px 8px" } }, facturasDelProy.length + " facturas")
         )
       ),
       abierto && React.createElement("div", { style: { padding: "0 14px 14px" } },
-        renderBuscBloque(proy, "activ", "Actividades", regsDelProy, r =>
-          React.createElement("div", { key: r.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
-            React.createElement("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, r.esGrupo ? (gC(r.lineasGrupo?.[0]?.conceptoId)?.nombre || proy.nombre || "Grupo de actividades") : (gC(r.conceptoId)?.nombre || "—")),
-            React.createElement("span", { style: { display: "flex", gap: 6, alignItems: "center", flexShrink: 0 } },
+        renderBuscBloque(proy, "activ", "Actividades", filasActividad, fila => {
+          const r = fila.registro;
+          return React.createElement("div", {
+            key: fila.key,
+            onClick: () => irATrabajo(r, proy),
+            style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "8px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8, cursor: "pointer" }
+          },
+            React.createElement("div", { style: { minWidth: 0, flex: 1 } },
+              React.createElement("div", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, fila.nombre),
+              fila.comentario && React.createElement("div", { style: { fontSize: 11, color: C.textSec, marginTop: 2 } }, fila.comentario),
+              React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 2 } },
+                "Fecha: " + fmtD(r.fecha) + (r.createdAt ? " · Creado: " + fmtD(r.createdAt.slice(0, 10)) : "")
+              )
+            ),
+            React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexShrink: 0 } },
               React.createElement("span", { style: { fontSize: 11, color: C.textSec } }, r.trabajador || "—"),
-              !isAdmin && r.ofertaId && React.createElement("span", { style: { fontSize: 9, fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.1)", padding: "1px 6px", borderRadius: 8 } }, "Ofertada"),
+              !isAdmin && (r.ofertaCodigo || (r.ofertaCodigos && r.ofertaCodigos.length > 0)) && React.createElement("span", { style: { fontSize: 9, fontWeight: 700, color: "#7c3aed", background: "rgba(124,58,237,0.1)", padding: "1px 6px", borderRadius: 8 } }, "Ofertada"),
               badgeEstado(r.estado)
             )
-          )
-        ),
-        renderBuscBloque(proy, "hsse", "Supervisiones HSSE", hsseDelProy, s =>
-          React.createElement("div", { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
-            React.createElement("span", null, fmtD(s.fecha) + " · " + (s.supervisor || "—")),
-            badgeEstado(s.estado)
-          )
-        ),
-        isAdmin && renderBuscBloque(proy, "ofertas", "Ofertas", ofertasDelProy, o =>
-          React.createElement("div", { key: o.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
-            React.createElement("span", null, (o.numero || "—") + " · " + (o.asunto || "")),
-            badgeEstado(o.estado)
-          )
-        ),
+          );
+        }),
         isAdmin && renderBuscBloque(proy, "facturas", "Facturas", facturasDelProy, f =>
           React.createElement("div", { key: f.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
             React.createElement("span", null, f.numero || "—"),
@@ -6254,7 +6290,17 @@ function App() {
     );
   };
 
+  const renderAnioBloque = (anio, abierto, onToggle, count, contenido) =>
+    React.createElement("div", { key: anio, style: { marginBottom: 10 } },
+      React.createElement("div", {
+        onClick: onToggle,
+        style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "9px 14px", background: C.cardL, borderRadius: 8, border: `1px solid ${C.border}`, fontWeight: 700, fontSize: 13 }
+      }, (abierto ? "▾ " : "▸ ") + anio + " (" + count + ")"),
+      abierto && React.createElement("div", { style: { marginTop: 8, display: "flex", flexDirection: "column", gap: 8 } }, contenido)
+    );
+
   const buscadorEl = modulo !== "buscador" ? null : (() => {
+    const estName = (estacionesConId.find(e => e.id === buscSiteId)?.nombre || "").trim().toLowerCase();
     const proyectosSite = buscSiteId ? proyectos.filter(p => p.estacionId === buscSiteId).sort((a, b) => (b.creadoEn || "").localeCompare(a.creadoEn || "")) : [];
     const porAnio = {};
     proyectosSite.forEach(p => {
@@ -6262,9 +6308,24 @@ function App() {
       (porAnio[anio] = porAnio[anio] || []).push(p);
     });
     const anios = Object.keys(porAnio).sort((a, b) => b.localeCompare(a));
+
+    // Ofertas: no llevan proyectoId poblado en los datos reales, solo el nombre
+    // de SITE en texto libre — se muestran a nivel de SITE, no por proyecto.
+    const ofertasSite = buscSiteId ? ofertas.filter(o => (o.estacion || "").trim().toLowerCase() === estName).sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "")) : [];
+
+    // HSSE: idem, solo enlaza por site en texto libre; se agrupa por año,
+    // independiente de los proyectos.
+    const hsseSite = buscSiteId ? hsseSups.filter(s => (s.site || "").trim().toLowerCase() === estName) : [];
+    const hssePorAnio = {};
+    hsseSite.forEach(s => {
+      const anio = (s.fecha || "").slice(0, 4) || "—";
+      (hssePorAnio[anio] = hssePorAnio[anio] || []).push(s);
+    });
+    const hsseAnios = Object.keys(hssePorAnio).sort((a, b) => b.localeCompare(a));
+
     return React.createElement("div", { style: { maxWidth: 1060, margin: "0 auto" } },
       React.createElement("h2", { style: { fontSize: 17, fontWeight: 700, marginBottom: 4 } }, "Buscador"),
-      React.createElement("p", { style: { fontSize: 12, color: C.textSec, marginBottom: 14 } }, "Busca un SITE para ver los proyectos asociados y, dentro de cada uno, sus actividades" + (isAdmin ? ", ofertas, facturas" : "") + " y supervisiones HSSE."),
+      React.createElement("p", { style: { fontSize: 12, color: C.textSec, marginBottom: 14 } }, "Busca un SITE para ver los proyectos asociados y, dentro de cada uno, sus actividades" + (isAdmin ? " y facturas" : "") + ". Las ofertas" + (isAdmin ? "" : "") + " y las supervisiones HSSE se muestran aparte, a nivel de SITE."),
       React.createElement("input", {
         list: "buscador-est-list",
         placeholder: "Escribe el nombre de un SITE...",
@@ -6281,21 +6342,43 @@ function App() {
         estacionesConId.map(e => React.createElement("option", { key: e.id, value: e.nombre }))
       ),
       !buscSiteId && React.createElement("div", { style: { textAlign: "center", padding: 40, color: C.muted, fontSize: 13 } }, "Busca un SITE para empezar."),
-      buscSiteId && proyectosSite.length === 0 && React.createElement("div", { style: { textAlign: "center", padding: 40, color: C.muted, fontSize: 13 } }, "No hay proyectos para este SITE."),
-      buscSiteId && anios.map(anio => {
-        const yAbierto = buscExpYears[anio] !== false; // por defecto abierto si hay pocos años; se pliega a mano
-        return React.createElement("div", { key: anio, style: { marginBottom: 10 } },
-          React.createElement("div", {
-            onClick: () => setBuscExpYears(s => ({ ...s, [anio]: !yAbierto })),
-            style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "9px 14px", background: C.cardL, borderRadius: 8, border: `1px solid ${C.border}`, fontWeight: 700, fontSize: 13 }
-          }, (yAbierto ? "▾ " : "▸ ") + anio + " (" + porAnio[anio].length + " proyectos)"),
-          yAbierto && React.createElement("div", { style: { marginTop: 8, display: "flex", flexDirection: "column", gap: 8 } },
-            porAnio[anio].map(proy => renderBuscadorProyecto(proy))
-          )
-        );
-      })
+
+      buscSiteId && React.createElement("h3", { style: { fontSize: 14, fontWeight: 700, margin: "6px 0 10px" } }, "Proyectos"),
+      buscSiteId && proyectosSite.length === 0 && React.createElement("div", { style: { padding: "10px 0 20px", color: C.muted, fontSize: 13 } }, "No hay proyectos para este SITE."),
+      buscSiteId && anios.map(anio => renderAnioBloque(
+        anio,
+        buscExpYears[anio] !== false,
+        () => setBuscExpYears(s => ({ ...s, [anio]: buscExpYears[anio] === false })),
+        porAnio[anio].length,
+        porAnio[anio].map(proy => renderBuscadorProyecto(proy))
+      )),
+
+      isAdmin && buscSiteId && React.createElement("h3", { style: { fontSize: 14, fontWeight: 700, margin: "18px 0 10px" } }, "Ofertas del SITE"),
+      isAdmin && buscSiteId && (ofertasSite.length === 0
+        ? React.createElement("div", { style: { padding: "10px 0 20px", color: C.muted, fontSize: 13 } }, "No hay ofertas para este SITE.")
+        : React.createElement("div", { style: { border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", marginBottom: 20 } },
+          ofertasSite.map(o => React.createElement("div", { key: o.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderTop: `1px solid ${C.border}`, fontSize: 12, gap: 8 } },
+            React.createElement("span", null, (o.numero || "—") + " · " + (o.asunto || "") + " · " + fmtD(o.fecha)),
+            badgeEstado(o.estado)
+          ))
+        )
+      ),
+
+      buscSiteId && React.createElement("h3", { style: { fontSize: 14, fontWeight: 700, margin: "18px 0 10px" } }, "Supervisiones HSSE del SITE"),
+      buscSiteId && hsseSite.length === 0 && React.createElement("div", { style: { padding: "10px 0 20px", color: C.muted, fontSize: 13 } }, "No hay supervisiones HSSE para este SITE."),
+      buscSiteId && hsseAnios.map(anio => renderAnioBloque(
+        "hsse_" + anio,
+        buscExpYears["hsse_" + anio] !== false,
+        () => setBuscExpYears(s => ({ ...s, ["hsse_" + anio]: buscExpYears["hsse_" + anio] === false })),
+        hssePorAnio[anio].length,
+        hssePorAnio[anio].map(s => React.createElement("div", { key: s.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, gap: 8 } },
+          React.createElement("span", null, fmtD(s.fecha) + " · " + (s.supervisor || "—")),
+          badgeEstado(s.estado)
+        ))
+      ))
     );
   })();
+
   // Auto-logout por inactividad
   useEffect(() => {
     if (fase !== "app") return;
