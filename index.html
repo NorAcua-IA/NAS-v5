@@ -515,6 +515,7 @@ function _rowToInforme(row) {
     nom: row.nombre || periodo,
     proyNombre: '',  // se resuelve desde proyectos[] si es necesario
     proyectoId: row.proyecto_id || null,
+    clienteId: row.cliente_id || null,
     importeTotal: row.importe_total || null,
     estado: row.factura_id ? 'facturado' : (row.estado || 'borrador'),
     facturaRef: window._naFacturaNumMap?.[row.factura_id] || null,
@@ -4257,6 +4258,7 @@ function App() {
           id: r.id,
           codigo: r.codigo || '',
           nombre: r.nombre || '',
+          clienteId: r.cliente_id || null,
           iban: r.iban || '',
           contFact: r.cont_factura || 0,
           contSupl: r.cont_suplido || 0,
@@ -4553,6 +4555,7 @@ function App() {
             return {
               id: inf.id,
               nombre: inf.nom || inf.periodo || '',
+              cliente_id: inf.clienteId || null,
               proyecto_id: inf.proyectoId || null,
               periodo_desde: partes[0] && /^\d{4}-\d{2}-\d{2}$/.test(partes[0]) ? partes[0] : null,
               periodo_hasta: partes[1] && /^\d{4}-\d{2}-\d{2}$/.test(partes[1]) ? partes[1] : null,
@@ -4605,7 +4608,7 @@ function App() {
       window._bkSeries = setTimeout(async () => {
         try {
           const rows = series.map(s => ({
-            id: s.id, codigo: s.codigo, nombre: s.nombre || '',
+            id: s.id, codigo: s.codigo, nombre: s.nombre || '', cliente_id: s.clienteId || null,
             cont_factura: s.contFact || 0, cont_suplido: s.contSupl || 0, cont_abono: s.contAbon || 0
           }));
           await _sb('/rest/v1/na_series', { method: 'POST', body: JSON.stringify(rows), headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' } });
@@ -5315,6 +5318,7 @@ function App() {
       html,
       importeTotal,
       proyectoId,
+      clienteId: clienteId || clientes?.[0]?.id || null,
       regIds: regIds || []
     };
     // v3: persistir inmediatamente en BD (no esperar al useEffect)
