@@ -11598,7 +11598,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "+ A\xF1adir concepto..."), capsCatalogo.filter(cap => !addLineaCapFiltro || cap.cap === addLineaCapFiltro).map(cap => {
-    const items = concs.filter(c => c.capId === cap.cap);
+    const items = concsActivos.filter(c => c.capId === cap.cap);
     if (!items.length) return null;
     return /*#__PURE__*/React.createElement("optgroup", {
       key: cap.cap,
