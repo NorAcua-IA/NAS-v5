@@ -5710,7 +5710,8 @@ function App() {
     const lineas = Array.isArray(editOferta.lineas) ? editOferta.lineas : [];
     const snapshot = {
       ...editOferta,
-      lineas
+      lineas,
+      importeTotal: calcOfertaTotal(lineas)
     };
     const esAdmin = isAdmin;
     if (editOfertaMode === "new") {
