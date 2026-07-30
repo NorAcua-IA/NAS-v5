@@ -198,6 +198,7 @@ function _rowToReg(row) {
     esGrupo: !!row.es_grupo,
     lineasGrupo: [],
     creadoPor: window._naTecnicoNameMap?.[row.creado_por_id] || '',
+    creadoPorId: row.creado_por_id || null,
     createdAt: row.creado_en || row.fecha,
     ofertaId: row.oferta_id || null,
     ofertaCodigo: window._naOfertaCodMap?.[row.oferta_id] || '',
@@ -258,6 +259,7 @@ function _rowToFact(row) {
     clienteId: row.cliente_id || '',
     clienteNombre: '',  // se resuelve desde clientes[]
     serieId: row.serie_id || '',
+    creadoPorId: row.creado_por_id || null,
     concepto: row.observaciones || '',     // alias para compatibilidad con guardado
     observaciones: row.observaciones || '', // campo real que usa la UI (PDF, tabla, etc.)
     po: row.po_ref || '',
@@ -367,6 +369,7 @@ function _rowToOferta(row) {
     estado: estado,
     fecha: m.fecha || row.creado_en?.slice(0,10) || '',
     clienteId: row.cliente_id || '',
+    creadoPorId: row.creado_por_id || null,
     estacion: emplazamiento,
     emplazamiento: emplazamiento,
     zona: m.zona || '',
@@ -5607,6 +5610,7 @@ function App() {
           dbInformes.upsert({
             id: updated.id,
             nombre: updated.nom || '',
+            cliente_id: updated.clienteId || null,
             proyecto_id: updated.proyectoId || null,
             importe_total: updated.importeTotal || null,
             estado: 'facturado',
