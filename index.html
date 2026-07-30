@@ -5055,6 +5055,11 @@ function App() {
   const addEstacion = () => {
     if (!nuevaES.trim()) return;
     const n = nuevaES.trim();
+    const nId = window._naEstIdMap?.[n] || n.toLowerCase().replace(/[^a-z0-9]/gi, '_').slice(0, 50);
+    if (!window._naEstIdMap) window._naEstIdMap = {};
+    window._naEstIdMap[n] = nId;
+    dbEstaciones.upsert({ id: nId, nombre: n, zona: nuevaESZona || null, cliente_id: nuevaESCliente || null })
+      .catch(e => console.error('[NorAcuaV5] fallo al crear estación (addEstacion):', e));
     if (!estaciones.includes(n)) setEstaciones(e => [...e, n].sort());
     setEstMeta(m => ({ ...m, [n]: { zona: nuevaESZona || '', clienteId: nuevaESCliente || null } }));
     setNuevaES("");
@@ -5063,7 +5068,8 @@ function App() {
     setMNuevaES(false);
   };
   const addProy = () => {
-    if (!fPr.nombre || !fPr.zona) return;
+    if (!fPr.nombre) { alert("Falta el nombre del proyecto."); return; }
+    if (!fPr.zona) { alert("Falta seleccionar la Zona antes de guardar el proyecto."); return; }
     if (!fPr.clienteId) { alert("Selecciona un cliente antes de guardar el proyecto."); return; }
     const newId = uuid();
     // v4.0 fix: resolver SITE y Responsable (elegidos por nombre) a sus
@@ -11909,10 +11915,15 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
   }, "Estaci\xF3n de servicio"), /*#__PURE__*/React.createElement("select", {
     value: estaciones.includes(fPr.estacion) ? fPr.estacion : "__libre__",
     onChange: e => {
-      if (e.target.value !== "__libre__") setFPr(p => ({
-        ...p,
-        estacion: e.target.value
-      }));else setFPr(p => ({
+      if (e.target.value !== "__libre__") {
+        const meta = estMeta[e.target.value];
+        setFPr(p => ({
+          ...p,
+          estacion: e.target.value,
+          zona: meta?.zona || p.zona,
+          clienteId: meta?.clienteId || p.clienteId
+        }));
+      } else setFPr(p => ({
         ...p,
         estacion: ""
       }));
