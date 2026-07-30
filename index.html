@@ -5882,10 +5882,24 @@ function App() {
 
   // FIX #7: crear proyecto desde propuesta técnico
   const crearProyectoDesdeOferta = () => {
-    if (!fNuevoPrOfer.nombre || !fNuevoPrOfer.zona) return;
+    if (!fNuevoPrOfer.nombre) { alert("Falta el nombre del proyecto."); return; }
+    if (!fNuevoPrOfer.zona) { alert("Falta seleccionar la Zona."); return; }
+    const clienteIdPr = editOferta?.clienteId || null;
+    if (!clienteIdPr) { alert("Esta oferta no tiene cliente asignado; asígnalo antes de crear el proyecto."); return; }
+    const estIdPr = fNuevoPrOfer.estacion
+      ? (window._naEstIdMap?.[fNuevoPrOfer.estacion] || fNuevoPrOfer.estacion.toLowerCase().replace(/[^a-z0-9]/gi, '_').slice(0, 50))
+      : null;
+    if (fNuevoPrOfer.estacion && !window._naEstIdMap?.[fNuevoPrOfer.estacion]) {
+      if (!window._naEstIdMap) window._naEstIdMap = {};
+      window._naEstIdMap[fNuevoPrOfer.estacion] = estIdPr;
+      dbEstaciones.upsert({ id: estIdPr, nombre: fNuevoPrOfer.estacion, zona: fNuevoPrOfer.zona || null, cliente_id: clienteIdPr })
+        .catch(e => console.error('[NorAcuaV5] fallo al crear estación (crearProyectoDesdeOferta):', e));
+    }
     const newP = {
       ...fNuevoPrOfer,
       id: uuid(),
+      estacionId: estIdPr,
+      clienteId: clienteIdPr,
       creadoEn: new Date().toISOString(),
       creadoPor: user?.nombre || "admin"
     };
@@ -14151,7 +14165,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
         React.createElement("div",{style:{display:"flex",gap:6}},
           React.createElement("input",{list:"hsse-sites-dl",value:(mHsseEdit||fHs).site||"",onChange:function(e){var v=e.target.value;if(mHsseEdit)setMHsseEdit(function(x){return Object.assign({},x,{site:v});});else setFHs(function(x){return Object.assign({},x,{site:v});});},placeholder:"Buscar o escribir EESS...",style:{flex:1,padding:"6px 10px",border:"1px solid #dde2e8",borderRadius:5,fontSize:12,fontFamily:"inherit",background:"#f9fafb",outline:"none"}}),
           React.createElement("datalist",{id:"hsse-sites-dl"},estaciones.map(function(e){return React.createElement("option",{key:e,value:e});})),
-          (mHsseEdit||fHs).site&&!estaciones.includes((mHsseEdit||fHs).site)&&React.createElement("button",{onClick:function(){var v=((mHsseEdit||fHs).site||"").trim();if(v&&!estaciones.includes(v))setEstaciones(function(p){return p.concat([v]).sort();});},style:{background:"#00c8c8",color:"#fff",border:"none",borderRadius:5,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}},"+ Añadir")
+          (mHsseEdit||fHs).site&&!estaciones.includes((mHsseEdit||fHs).site)&&React.createElement("button",{onClick:function(){var v=((mHsseEdit||fHs).site||"").trim();if(v&&!estaciones.includes(v)){var nId=(window._naEstIdMap&&window._naEstIdMap[v])||v.toLowerCase().replace(/[^a-z0-9]/gi,'_').slice(0,50);if(!window._naEstIdMap)window._naEstIdMap={};window._naEstIdMap[v]=nId;dbEstaciones.upsert({id:nId,nombre:v,zona:null,cliente_id:null}).catch(function(e){console.error('[NorAcuaV5] fallo al crear estación (HSSE +Añadir):',e);});setEstaciones(function(p){return p.concat([v]).sort();});}},style:{background:"#00c8c8",color:"#fff",border:"none",borderRadius:5,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}},"+ Añadir")
         ),
       
       /* TIPO ACTIVIDAD */
@@ -14241,7 +14255,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
             var data=mHsseEdit||fHs;
             var site=(data.site||"").trim();
             if(!site||!data.fecha||!data.horas){alert("Site, fecha y horas son obligatorios.");return;}
-            if(site&&!estaciones.includes(site))setEstaciones(function(p){return p.concat([site]).sort();});
+            if(site&&!estaciones.includes(site)){var nId2=(window._naEstIdMap&&window._naEstIdMap[site])||site.toLowerCase().replace(/[^a-z0-9]/gi,'_').slice(0,50);if(!window._naEstIdMap)window._naEstIdMap={};window._naEstIdMap[site]=nId2;dbEstaciones.upsert({id:nId2,nombre:site,zona:null,cliente_id:null}).catch(function(e){console.error('[NorAcuaV5] fallo al crear estación (HSSE guardar):',e);});setEstaciones(function(p){return p.concat([site]).sort();});}
             if(mHsseEdit){
               var editId=mHsseEdit.id;
               var saveData=Object.assign({},data,{site:site,horasOrig:data.horasOrig||data.horas,horasAdmin:data.horasAdmin!=null?data.horasAdmin:data.horas,precioHora:data.precioHora!=null?data.precioHora:_naPrecioHsseVigente(data.zona||"",data.fecha||null)});
