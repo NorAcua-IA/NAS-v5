@@ -5899,10 +5899,13 @@ function App() {
       dbEstaciones.upsert({ id: estIdPr, nombre: fNuevoPrOfer.estacion, zona: fNuevoPrOfer.zona || null, cliente_id: clienteIdPr })
         .catch(e => console.error('[NorAcuaV5] fallo al crear estación (crearProyectoDesdeOferta):', e));
     }
+    const respPr = resps.find(r => (typeof r === "object" ? r.nombre : r) === fNuevoPrOfer.responsableBP);
+    const respIdPr = (respPr && typeof respPr === "object") ? respPr.id : null;
     const newP = {
       ...fNuevoPrOfer,
       id: uuid(),
       estacionId: estIdPr,
+      responsableBPId: respIdPr,
       clienteId: clienteIdPr,
       creadoEn: new Date().toISOString(),
       creadoPor: user?.nombre || "admin"
@@ -13371,7 +13374,21 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
       estacion: v
     })),
     placeholder: "Ej: ES Alcal\xE1"
-  }), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", { style: { marginBottom: 11 } },
+    /*#__PURE__*/React.createElement("label", { style: { display: "block", fontSize: 10, fontWeight: 600, color: C.textSec, marginBottom: 3, textTransform: "uppercase", letterSpacing: .7 } }, "Responsable cliente"),
+    /*#__PURE__*/React.createElement("select", {
+      value: fNuevoPrOfer.responsableBP || "",
+      onChange: e => setFNuevoPrOfer(p => ({ ...p, responsableBP: e.target.value })),
+      style: { width: "100%", padding: "8px 11px", border: "1px solid " + C.border, borderRadius: 6, fontSize: 13, fontFamily: "inherit", background: C.inputBg, color: C.text }
+    },
+      /*#__PURE__*/React.createElement("option", { value: "" }, "— Seleccionar —"),
+      (function(){
+              var allNames = resps.map(function(r){return typeof r==="object"?r.nombre:r;}).filter(Boolean);
+              proyectos.forEach(function(p){if(p.responsableBP&&!allNames.includes(p.responsableBP))allNames.push(p.responsableBP);});
+              return allNames.sort().map(function(n){return /*#__PURE__*/React.createElement("option",{key:n,value:n},n);});
+            })()
+    )
+  ), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "flex-end",
