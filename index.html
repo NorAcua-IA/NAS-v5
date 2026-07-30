@@ -5684,10 +5684,12 @@ function App() {
     setViewO("editor");
   };
   const nuevaVersionOferta = oferta => {
+    const nuevaVersionNum = (oferta.version || 1) + 1;
     const nueva = {
       ...oferta,
       id: null,
-      version: (oferta.version || 1) + 1,
+      numero: (oferta.numero || '') + '-v' + nuevaVersionNum,
+      version: nuevaVersionNum,
       fecha: today(),
       estado: "Borrador",
       creadoEn: new Date().toISOString()
