@@ -6228,7 +6228,12 @@ function App() {
     const regsDelProy = registros.filter(r => r.proyectoId === proy.id);
     const ofertasDelProy = ofertas.filter(o => o.proyectoId === proy.id);
     const facturaIdsDelProy = new Set(regsDelProy.map(r => r.facturaId).filter(Boolean));
-    const facturasDelProy = facturas.filter(f => facturaIdsDelProy.has(f.id));
+    const codigosOfertaDelProy = new Set(ofertasDelProy.map(o => o.numero).filter(Boolean));
+    const facturasDelProy = facturas.filter(f => {
+      if (facturaIdsDelProy.has(f.id)) return true;
+      const m = (f.observaciones || "").match(/Ref\. oferta: ([0-9]+-[0-9]+)/);
+      return !!(m && codigosOfertaDelProy.has(m[1]));
+    });
     const totalOfertas = ofertasDelProy.reduce((s, o) => s + (o.importeTotal || 0), 0);
     const totalFacturas = facturasDelProy.reduce((s, f) => s + (f.total || 0), 0);
 
@@ -6363,7 +6368,7 @@ function App() {
 
     return React.createElement("div", { style: { maxWidth: 1060, margin: "0 auto" } },
       React.createElement("h2", { style: { fontSize: 17, fontWeight: 700, marginBottom: 4 } }, "Buscador"),
-      React.createElement("p", { style: { fontSize: 12, color: C.textSec, marginBottom: 14 } }, "Busca un SITE para ver los proyectos asociados y, dentro de cada uno, sus actividades" + (isAdmin ? " y facturas" : "") + ". Las ofertas" + (isAdmin ? "" : "") + " y las supervisiones HSSE se muestran aparte, a nivel de SITE."),
+      React.createElement("p", { style: { fontSize: 12, color: C.textSec, marginBottom: 14 } }, "Busca un SITE para ver los proyectos asociados y, dentro de cada uno, sus actividades" + (isAdmin ? ", ofertas y facturas" : "") + "."),
       React.createElement("input", {
         list: "buscador-est-list",
         placeholder: "Escribe el nombre de un SITE...",
@@ -6713,6 +6718,11 @@ function App() {
         setUser(null);
         keyRef.current = null;
         setConcs([]);
+        setBuscSiteId("");
+        setBuscSiteInput("");
+        setBuscExpYears({});
+        setBuscExpProy({});
+        setBuscExpBlock({});
       }, 2800);
     },
     disabled: loggingOut,
