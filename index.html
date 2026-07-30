@@ -4866,7 +4866,15 @@ function App() {
       if (u.id) {
         const sesiones = await dbSesiones.getLastLogin(u.id) || [];
         prevLogin = sesiones[1]?.iniciada_en || sesiones[0]?.iniciada_en || null;
-        await dbSesiones.insert({ usuario_id: u.id, iniciada_en: ahora });
+        let ipPublica = null;
+        try {
+          const ipResp = await Promise.race([
+            fetch('https://api.ipify.org?format=json'),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000))
+          ]);
+          ipPublica = (await ipResp.json())?.ip || null;
+        } catch (eIp) { /* si falla, seguimos sin IP */ }
+        await dbSesiones.insert({ usuario_id: u.id, iniciada_en: ahora, ip_publica: ipPublica });
       }
     } catch(e) { console.warn('[NorAcuaV3] sesión login:', e.message); }
     setLastLogin(prevLogin);
