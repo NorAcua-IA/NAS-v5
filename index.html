@@ -5071,6 +5071,12 @@ function App() {
     const estId = fPr.estacion
       ? (window._naEstIdMap?.[fPr.estacion] || fPr.estacion.toLowerCase().replace(/[^a-z0-9]/gi, '_').slice(0, 50))
       : null;
+    if (fPr.estacion && !window._naEstIdMap?.[fPr.estacion]) {
+      if (!window._naEstIdMap) window._naEstIdMap = {};
+      window._naEstIdMap[fPr.estacion] = estId;
+      dbEstaciones.upsert({ id: estId, nombre: fPr.estacion, zona: fPr.zona || null, cliente_id: fPr.clienteId || null })
+        .catch(e => console.error('[NorAcuaV5] fallo al crear estación nueva:', e));
+    }
     const resp = resps.find(r => (typeof r === "object" ? r.nombre : r) === fPr.responsableBP);
     const respId = (resp && typeof resp === "object") ? resp.id : null;
     setProyectos(p => [...p, {
@@ -5091,6 +5097,12 @@ function App() {
     const estId = mEProy.estacion
       ? (window._naEstIdMap?.[mEProy.estacion] || mEProy.estacion.toLowerCase().replace(/[^a-z0-9]/gi, '_').slice(0, 50))
       : null;
+    if (mEProy.estacion && !window._naEstIdMap?.[mEProy.estacion]) {
+      if (!window._naEstIdMap) window._naEstIdMap = {};
+      window._naEstIdMap[mEProy.estacion] = estId;
+      dbEstaciones.upsert({ id: estId, nombre: mEProy.estacion, zona: mEProy.zona || null, cliente_id: mEProy.clienteId || null })
+        .catch(e => console.error('[NorAcuaV5] fallo al crear estación nueva:', e));
+    }
     const resp = resps.find(r => (typeof r === "object" ? r.nombre : r) === mEProy.responsableBP);
     const respId = (resp && typeof resp === "object") ? resp.id : (mEProy.responsableBPId || null);
     const mEProyConIds = { ...mEProy, estacionId: estId || mEProy.estacionId, responsableBPId: respId };
