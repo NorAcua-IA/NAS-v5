@@ -13731,13 +13731,13 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
         React.createElement("select",{value:filtroHS,onChange:function(e){setFiltroHS(e.target.value);},style:{padding:"5px 9px",border:"1px solid #dde2e8",borderRadius:5,fontSize:11,fontFamily:"inherit",background:"#f9fafb"}},
           React.createElement("option",{value:""},"Todos estados"),
           React.createElement("option",{value:"pendiente"},"Pendiente"),
-          React.createElement("option",{value:"aprobado"},"Aprobado")
+          React.createElement("option",{value:"aprobado"},"Aprobado"),
+          React.createElement("option",{value:"anulado"},"Anulado")
         )
       ),
       (function(){
         var MESES=["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
         var filtered=hsseSups.filter(function(s){
-          if(s.estado==="anulado")return false;
           if(filtroHTrab&&s.supervisor!==filtroHTrab)return false;
           if(filtroHS&&s.estado!==filtroHS)return false;
           return true;
