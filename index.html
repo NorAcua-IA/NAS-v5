@@ -397,7 +397,7 @@ function _ofertaToRow(o) {
     proyecto_id: o.proyectoId || null,
     creado_por_id: o.creadoPorId || null,
     importe_total: o.importeTotal || null,
-    metadatos: { numero: o.numero||'', fecha: o.fecha||'', estacion: o.estacion||'', zona: o.zona||'', responsable: o.responsable||'', lineas: o.lineas||[], version: o.version||1, ref: o.ref||'', notas: o.notas||'' },
+    metadatos: { numero: o.numero||'', fecha: o.fecha||'', estacion: o.emplazamiento||o.estacion||'', emplazamiento: o.emplazamiento||o.estacion||'', zona: o.zona||'', responsable: o.responsable||'', lineas: o.lineas||[], version: o.version||1, ref: o.ref||'', notas: o.notas||'' },
     creado_en: o.creadoEn || new Date().toISOString()
   };
 }
