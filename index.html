@@ -13811,7 +13811,10 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
                           React.createElement("button",{onClick:function(){setHsseSups(function(p){return p.map(function(x){return x.id===s.id?Object.assign({},x,{estado:"aprobado",horasAdmin:x.horasAdmin!=null?x.horasAdmin:x.horas}):x;});});},style:{background:"#1a9e7a",color:"#fff",border:"none",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}},"✓ Aprobar"),
                           React.createElement("button",{onClick:function(){if(window.confirm("¿Anular esta supervisión?"))setHsseSups(function(p){return p.map(function(x){return x.id===s.id?Object.assign({},x,{estado:"anulado"}):x;});});},style:{background:"transparent",border:"1px solid #d03030",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"#d03030"}},"Anular")
                         ),
-                        !isPend&&React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#1a9e7a",background:"rgba(26,158,122,0.1)",padding:"2px 7px",borderRadius:10}},"Aprobado")
+                        !isPend&&React.createElement("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}},
+                          React.createElement("span",{style:{fontSize:10,fontWeight:700,color:s.estado==="aprobado"?"#1a9e7a":"#d03030",background:s.estado==="aprobado"?"rgba(26,158,122,0.1)":"rgba(208,48,48,0.1)",padding:"2px 7px",borderRadius:10}},s.estado==="aprobado"?"Aprobado":"Anulado"),
+                          React.createElement("button",{onClick:function(){setHsseSups(function(p){return p.map(function(x){return x.id===s.id?Object.assign({},x,{estado:"pendiente"}):x;});});},style:{background:"transparent",border:"1px solid #dde2e8",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10,color:"#555e66"}},"\u21A9 Revertir a pendiente")
+                        )
                       )
                     )
                   );
