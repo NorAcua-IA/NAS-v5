@@ -13981,8 +13981,10 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
             var po=hsseCfg.poAnual||"";
             var fmtD2=function(d){return d?d.replace(/-/g,"").substring(2):"";};
             var yyyy=fInfH.desde?fInfH.desde.substring(0,4):(new Date().getFullYear()+"");
-            var numPad=String(hsseInfCounter).padStart(3,"0");
-            var nom="INF-HSSE-"+yyyy+"-"+numPad+(fInfH.trab?" ("+fInfH.trab.split(" ")[0]+")":"");
+            var _mesesAbr=["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
+            var _mesIdx=fInfH.desde?parseInt(fInfH.desde.substring(5,7),10)-1:new Date().getMonth();
+            var mesAbr=_mesesAbr[_mesIdx]||"";
+            var nom="INF-HSSE-"+yyyy+"-"+mesAbr+(fInfH.trab?" ("+fInfH.trab.split(" ")[0]+")":"");
             var supsSorted=sups.slice().sort(function(a,b){return (a.fecha||"").localeCompare(b.fecha||"");});
             var html=genInfHSSE({sups:supsSorted,desde:fInfH.desde,hasta:fInfH.hasta,po:po,hsseCfg:hsseCfg,trabs:trabs});
             setMHssePrev({html:html,nom:nom,desde:fInfH.desde,hasta:fInfH.hasta,sups:sups,po:po,readonly:false});
@@ -14057,6 +14059,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
                 },
                 style:{background:"#1a9e7a",color:"#fff",border:"none",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,fontWeight:600}
               },"€ Facturar"),
+              React.createElement("button",{onClick:function(){var nuevo=window.prompt("Nuevo nombre del informe:",inf.nom);if(nuevo&&nuevo.trim()&&nuevo.trim()!==inf.nom){setHsseHist(function(p){return p.map(function(x){return x.id===inf.id?Object.assign({},x,{nom:nuevo.trim()}):x;});});}},style:{background:"transparent",border:"1px solid #dde2e8",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"#555e66"}},"Renombrar"),
               React.createElement("button",{onClick:function(){if(window.confirm("\u00BFEliminar este informe?")){dbInformes.softDelete(inf.id).catch(function(e){console.error("[NorAcuaV3] del hsseHist:",e);});setHsseHist(function(p){return p.filter(function(x){return x.id!==inf.id;});});}},style:{background:"transparent",border:"1px solid #d03030",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"#d03030"}},"Eliminar")
             )
           );
