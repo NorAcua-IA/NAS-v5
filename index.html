@@ -5837,7 +5837,7 @@ function App() {
       const c = concs.find(x => x.id === l.conceptoId);
       return {
         id: uuid(),
-        concepto: `${c?.id || ""} — ${c?.nombre || l.conceptoId}`,
+        concepto: `${c?.nombre || l.conceptoId}`,
         uds: l.cantidad || 1,
         precio: l.precioUnit || 0,
         descuento: Number(l.descuento) || 0,
@@ -10428,7 +10428,7 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
         color: C.muted,
         fontSize: 10
       }
-    }, c?.id, " "), c?.nombre || "—"), /*#__PURE__*/React.createElement("div", {
+    }, c?.codigo, " "), c?.nombre || "—"), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         alignItems: "center",
