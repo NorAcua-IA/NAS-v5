@@ -11466,7 +11466,14 @@ var factVencidas = facturas.filter(function(f){return f.fechaVto&&f.fechaVto<tod
     value: editOferta.zona,
     onChange: v => setEditOferta(d => ({
       ...d,
-      zona: v
+      zona: v,
+      lineas: (d.lineas || []).map(l => {
+        const c = concs.find(x => x.id === l.conceptoId);
+        const pu = c?.p?.[v] ?? l.precioUnit;
+        const updated = { ...l, precioUnit: pu };
+        updated.total = calcOfertaLinea(updated);
+        return updated;
+      })
     })),
     options: ZONAS.map(z => ({
       v: z,
